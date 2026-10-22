@@ -1,4 +1,5 @@
 # 스텔라리움 (Stellarium) — Linux 비공식 빌드
+**SSD가 죽어서 하드로 컴퓨터 사용중이라 SSD가 올때 까지 임시적으로 업데이트 중단합니다**
 
 **한국어** | [English](README.en.md) | [日本語](README.jp.md)
 
