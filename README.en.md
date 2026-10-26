@@ -1,100 +1,75 @@
-# Stellarium (스텔라리움)
+# Stellarium — Unofficial Linux Build
 
 [한국어](README.md) | **English** | [日本語](README.jp.md)
 
-A Windows desktop app that checks the CHZZK live status of StelLive members and sends a Windows
-notification when a broadcast starts.
+An **unofficial Linux fork** that checks the CHZZK broadcast status of Stellive members and sends a desktop notification when a stream starts.
+> ⚠️ This repository is a fork of the original project.  
+> Original project: https://github.com/tabiluv/stellastatus_app  
+> This fork is based on the original project and **adds an AppImage build and Linux support** so it can be used on Linux.
+>
+> It follows the features and MIT license of the original project, and apart from the Linux-related changes, the overall direction of the project follows the original.
 
-This app is not an official StelLive service. It is an unofficial, fan-operated project.
-
-Live status comes from CHZZK, and broadcast schedules (뱅온) come from StelLight. Built with the
-[`stellastatus`](https://www.npmjs.com/package/stellastatus) library and Electron.
-
-> 📌 For the difference between stable and beta versions and how to opt into betas, see the **[version guide](VERSIONING.md)** (written in Korean).
+This is not an official service provided by Stellive. It is an unofficial program made and distributed by a fan.
 
 ## Features
+- Periodic checking of CHZZK broadcast status and member subscriptions
+- Stream-start notifications and automatic opening of the default browser
+- Member profiles, live title, category, viewer count, and thumbnail
+- Broadcast schedule based on StelLight
+- Resident in the system tray, with auto-start on login
+- Update checks via GitHub Releases
+- Discord Rich Presence and integration with the Stellarium web view (original feature)
 
-- Periodically checks the CHZZK live status of all members
-- Windows notification when a subscribed member goes live (click to open the stream)
-- Optionally opens the live stream in your default browser when a broadcast starts
-- Per-member profile, live title / category / viewer count, thumbnails
-- Today's schedule (from StelLight)
-- Runs in the tray, optional launch at Windows startup
-- Self-update via GitHub Releases
+## Running and Development
 
-## Development
-
-Requires Node.js 18+.
+Node.js 20 or later is recommended.
 
 ```bash
-npm install
+npm ci
 npm run gen-icon
 npm run gen-logos
 npm start
 ```
 
-Use `npm run dev` to also open DevTools.
+To open the developer tools, run `npm run dev`.
 
-## Building the installer
-
-Builds the custom installer (`스텔라리움 Setup.exe`) in one step.
+## Building the Linux AppImage
 
 ```bash
-npm run build-setup
+npm ci
+npm run gen-icon
+npm run gen-logos
+npx electron-builder --linux AppImage --publish never
 ```
 
-The build packages the main app, bundles it inside the installer, and produces a single executable at
-`dist-installer/스텔라리움 Setup.exe`. Electron and the app are all included, so that single file is
-enough to install.
-
-The installer uses a frameless dark UI (welcome, terms, install location, progress, done), creates
-Desktop and Start Menu shortcuts, and registers an uninstall entry. You can also uninstall from within
-the app settings.
-
-## Distribution (GitHub Releases)
-
-The distributed artifact is a single `스텔라리움 Setup.exe`. The app's self-updater checks the GitHub
-Releases API for the latest release, so no extra metadata files are required.
-
-Push a version tag and GitHub Actions builds the installer and uploads it to the release.
+The build output is created in `dist/`. GitHub Actions builds the Linux AppImage and attaches it to the release when a `v*` tag is pushed or when run manually.
 
 ```bash
-git tag v1.0.3
-git push origin v1.0.3
+git tag v1.0.9
+git push origin v1.0.9
 ```
 
-## Data sources
+## Data and Privacy
+- Broadcast status: CHZZK internal API
+- Broadcast schedule: StelLight public API
+- Updates: GitHub Releases
+- App settings are stored locally. Network requests are limited to the services above and the Stellarium web service used by the app.
 
-- Live status: CHZZK internal API. This is an undocumented endpoint, so it may change or be blocked;
-  intended for personal, non-commercial use.
-- Schedules: the public API of StelLight, a fan-made service. The check interval is limited to a
-  minimum of 30 seconds to reduce server load.
+## Data Sources
 
-## Privacy policy
+- Broadcast status: CHZZK internal API. Since this endpoint has no official documentation, its response structure may change or it may be blocked, and it is intended for personal, non-commercial use only.
+- Broadcast schedule: Uses the public API of StelLight, a fan-made service. To reduce server load, the check interval is limited to a minimum of 30 seconds.
 
-- This app does not collect or transmit any personal data.
-- The app only sends network requests to:
-  - **CHZZK** — to read broadcast status
-  - **StelLight** — to read broadcast schedules
-  - **GitHub** — to check for and download updates
-- All settings (notification subscription lists, check interval, etc.) are **stored locally on the
-  user's PC only** and are never transmitted anywhere.
-- No information that the user did not request is sent to any external server.
 
-## License
+## License and Copyright
 
-MIT
+This project is distributed under the **MIT License**.
 
-## Linux (AppImage) and login return
+This repository is a fork of the following original project.
 
-Download the AppImage and `register-linux-protocol.sh` from GitHub Releases. Make the AppImage executable and launch it; the app registers `stellarium://` for the current user on first launch. Registration is stored under `~/.local/share/applications` and does not require root privileges.
+- Original: https://github.com/tabiluv/stellastatus_app
+- Fork: https://github.com/Maroshall/stellarium_unoffical_linux
 
-To register it before launching the app, run:
+We respect the copyright and MIT license terms of the original project, and the Linux-related code added or modified in this fork is distributed under the same project license terms.
 
-```bash
-chmod +x ./Stellarium-version.AppImage ./register-linux-protocol.sh
-./register-linux-protocol.sh ./Stellarium-version.AppImage
-```
-
-After registration, browser login links such as `stellarium://auth?t=...` can return to the app. Your desktop environment may show a confirmation prompt.
-
+For details, see the `LICENSE` file in the repository.
