@@ -102,16 +102,20 @@ jobs:
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: StellaStatus-Linux
-          path: dist/*.AppImage
+          name: Stellarium-Linux
+          path: |
+            dist/*.AppImage
+            scripts/register-linux-protocol.sh
           if-no-files-found: error
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: 스텔라상태 ${{ github.ref_name }}
+          name: 스텔라리움 ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
-          files: dist/*.AppImage
+          files: |
+            dist/*.AppImage
+            scripts/register-linux-protocol.sh
           fail_on_unmatched_files: true
           draft: false
           prerelease: false

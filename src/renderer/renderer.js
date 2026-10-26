@@ -1,4 +1,4 @@
-/* 스텔라상태 — 렌더러 UI 로직 */
+/* 스텔라리움 — 렌더러 UI 로직 */
 (() => {
   const api = window.stella;
   const I18N = window.I18N;
@@ -19,8 +19,6 @@
     installing: false,    // [설치하기] 눌러 다운로드/설치가 진행 중인지
     visibleKeys: new Set(),
     thumbStamp: 0, // 폴링 갱신 시각 — 라이브 썸네일 캐시 무효화용(아래 bustThumb 참고)
-    networkOffline: false,
-    networkToastShown: false,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -126,7 +124,7 @@
     sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z"/>',
     calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
-    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 2 2 2"/>',
+    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     // 소셜 브랜드 아이콘 — 각 브랜드 공식 로고(Simple Icons). 모두 채움(fill) 방식.
@@ -154,7 +152,8 @@
   // ── 유틸 ────────────────────────────────────
   const esc = (s) =>
     String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  // 오류 메시지를 복사 가능한 형태로 렌더한다.
+  // 오류 메시지를 '복사 가능한' 형태로 렌더한다 — 텍스트 선택 허용(전역 user-select:none 예외) + 복사 버튼.
+  // detail(실제 오류 원문)이 있으면 그대로 붙여넣어 신고할 수 있게 함께 보여준다.
   function errorBoxHtml(message, detail) {
     const full = detail ? `${message}\n${detail}` : String(message || '');
     return `<div class="err-box"><span class="err-text">${esc(message)}</span>`
@@ -362,6 +361,17 @@
     const pinBtn = card.querySelector('[data-pin]');
     if (pinBtn) pinBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePin(m.key); });
 
+    // 멤버 이름 클릭 → 앱 안 스텔라리움의 그 멤버 페이지로(기존 기능 ↔ 스텔라리움 연결)
+    const names = card.querySelector('.m-names');
+    if (names && m.slug) {
+      names.classList.add('to-stella');
+      names.setAttribute('role', 'button');
+      names.setAttribute('tabindex', '0');
+      names.title = T('card.toStella');
+      names.addEventListener('click', (e) => { e.stopPropagation(); openStellariumMember(m.slug); });
+      names.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStellariumMember(m.slug); } });
+    }
+
     // 프로필(아바타) 클릭 → 이름 블러 + 소셜 아이콘 팝아웃 토글
     if (SOCIALS.length) {
       const head = card.querySelector('.member-head');
@@ -493,9 +503,7 @@
       if (!emptyEl) {
         const e = document.createElement('div');
         e.className = 'empty-state';
-        e.textContent = state.networkOffline
-          ? '네트워크 연결이 불안정해요!'
-          : state.members.length ? T('empty.noMatch') : T('empty.loading');
+        e.textContent = state.members.length ? T('empty.noMatch') : T('empty.loading');
         grid.appendChild(e);
       }
     } else if (emptyEl) {
@@ -552,11 +560,7 @@
     const list = applyFilter(state.members);
     grid.innerHTML = '';
     if (!list.length) {
-      grid.innerHTML = `<div class="empty-state">${
-        state.networkOffline
-          ? '네트워크 연결이 불안정해요!'
-          : state.members.length ? esc(T('empty.noMatch')) : esc(T('empty.loading'))
-      }</div>`;
+      grid.innerHTML = `<div class="empty-state">${state.members.length ? esc(T('empty.noMatch')) : esc(T('empty.loading'))}</div>`;
     } else {
       const frag = document.createDocumentFragment();
       let anim = 0; // 새로 나타나는 카드만 순차 애니메이션(그대로 있는 카드는 그대로)
@@ -671,7 +675,8 @@
         if (ms == null) return true; // 시간 없는 항목(휴방 등)은 오늘 것으로 유지
         const d = kstDateStr(ms);
         if (d === today) return true;
-        // 어제 시작한 방송은 현재 라이브인 경우에만 오늘 일정으로 이월한다.
+        // 어제 시작한 '방송'(휴방 제외): '지금 라이브인 멤버'만 오늘로 이월해 보여준다.
+        // 방송중이지 않은 멤버의 어제 일정은 다음날로 넘어간 것으로 보고 오늘의 뱅온에서 제외한다.
         if (d === yesterday && !isRest(it.title)) { const mem = scheduleMember(it); return !!(mem && mem.isLive); }
         return false;
       })
@@ -681,10 +686,10 @@
         const d = kstDateStr(ms);
         const kstHour = new Date(ms + KST_OFFSET).getUTCHours();
         // 밤샘/이월 방송으로 취급: 어제 시작분, 또는 오늘 '새벽(6시 이전)' 시작분.
-        // → 지금 라이브일 때만 노출하고, 끝났으면(오프라인) 종료로 남기지 않는다(분류에서 제외).
         const overnight = d === yesterday || (d === today && kstHour < 6);
         if (!overnight) return it;
-        // 이월 처리는 현재 라이브인 멤버에게만 적용한다.
+        // 이월(_carry) 처리는 '지금 라이브인 멤버'에게만 적용한다. 방송중이지 않은 멤버는
+        // 이월 처리를 걸지 않아, 오늘 새벽 일정도 숨기지 않고 일반 '오늘' 항목으로 그대로 표시한다.
         const mem = scheduleMember(it);
         if (!(mem && mem.isLive)) return it;
         return { ...it, _carry: true, _fromYesterday: d === yesterday };
@@ -953,37 +958,49 @@
     return `${y}년 ${m + 1}월`;
   }
 
+  // 캘린더는 web(stellarium.kr/calendar)을 webview 로 임베드해 보여준다.
+  // (예전의 네이티브 캘린더 렌더 함수들은 더 이상 호출되지 않는다 — 아래 loadCalendar 등)
   async function openCalendar() {
-    const now = new Date(Date.now() + KST_OFFSET); // UTC 필드 = KST 벽시계
-    CAL.y = now.getUTCFullYear();
-    CAL.m = now.getUTCMonth();
-    closeDayDetail();
-    $('#calWeekdays').innerHTML = (CAL_WD[I18N.lang] || CAL_WD.ko).map((w, i) => `<div class="cal-wd${i === 0 ? ' sun' : ''}">${esc(w)}</div>`).join('');
     openModalEl('#calModal');
-    await loadCalendar();
+    const wv = $('#calWebview');
+    if (!wv || wv._loaded) return; // 최초 1회만 로드하고, 이후엔 그대로 유지
+    wv._loaded = true;
+    const loading = $('#calLoading');
+    const errEl = $('#calError');
+    if (loading) loading.hidden = false;
+    if (errEl) errEl.hidden = true;
+    let url = 'https://stellarium.kr/calendar';
+    try { url = await api.getWebCalUrl(); } catch { /* 기본값 사용 */ }
+    wv.addEventListener('did-finish-load', () => { if (loading) loading.hidden = true; });
+    wv.addEventListener('did-fail-load', (e) => {
+      if (e.errorCode === -3) return; // ABORTED(하위 리소스/취소) 은 무시
+      if (loading) loading.hidden = true;
+      if (errEl) { errEl.hidden = false; errEl.innerHTML = errorBoxHtml(T('sched.error'), `${e.errorDescription || ''} — ${url}`); }
+    });
+    wv.src = url;
   }
-  // 월 이동: 켜놓은 오른쪽 세부 패널은 그대로 유지한다(원래 선택한 날의 일정을 계속 보여줌).
   // ── 통합 설문(web /survey 를 webview 로) ─────────────────────
   async function openSurvey() {
     openModalEl('#surveyModal');
     const wv = $('#surveyWebview');
-    if (!wv || wv._loaded) return;
+    if (!wv || wv._loaded) return; // 최초 1회만 로드(참여 상태는 페이지가 스스로 관리)
     wv._loaded = true;
     const loading = $('#surveyLoading');
     const errEl = $('#surveyError');
     if (loading) loading.hidden = false;
     if (errEl) errEl.hidden = true;
     let url = '';
-    try { url = await api.getSurveyUrl(); } catch {}
+    try { url = await api.getSurveyUrl(); } catch { /* 실패 시 아래에서 오류 표시 */ }
     wv.addEventListener('did-finish-load', () => { if (loading) loading.hidden = true; });
     wv.addEventListener('did-fail-load', (e) => {
-      if (e.errorCode === -3) return;
+      if (e.errorCode === -3) return; // ABORTED 무시
       if (loading) loading.hidden = true;
       if (errEl) { errEl.hidden = false; errEl.innerHTML = errorBoxHtml(T('sched.error'), `${e.errorDescription || ''} — ${url}`); }
     });
     if (url) wv.src = url;
   }
-
+  // 배너는 '진행 중 · 닫지 않음' 이면 보인다(집계는 받지 않는다).
+  // 이미 참여한 기기에도 계속 띄워, 언제든 눌러 응답을 수정하거나 취소할 수 있게 한다.
   async function updateSurveyBanner() {
     const banner = $('#surveyBanner');
     if (!banner) return;
@@ -998,19 +1015,74 @@
       banner.hidden = false;
     } catch { banner.hidden = true; }
   }
-
   function wireSurvey() {
     $('#surveyJoin').addEventListener('click', openSurvey);
-    $('#surveyDismiss').addEventListener('click', async () => {
-      $('#surveyBanner').hidden = true;
-      try { await api.dismissSurvey(); } catch {}
-    });
+    $('#surveyDismiss').addEventListener('click', async () => { $('#surveyBanner').hidden = true; try { await api.dismissSurvey(); } catch { /* 무시 */ } });
     $('#closeSurvey').addEventListener('click', () => { closeModalEl('#surveyModal'); updateSurveyBanner(); });
-    $('#surveyModal').addEventListener('click', (e) => {
-      if (e.target.id === 'surveyModal') { closeModalEl('#surveyModal'); updateSurveyBanner(); }
-    });
+    $('#surveyModal').addEventListener('click', (e) => { if (e.target.id === 'surveyModal') { closeModalEl('#surveyModal'); updateSurveyBanner(); } });
   }
 
+  // ── 화면 전환: 방송 상태(기존 UI) ↔ 스텔라리움(통합 홈/멤버 페이지를 webview 로) ──────
+  // 서비스 초기 기본은 'status'(기존 UI). 선택은 설정에 저장돼 다음 실행에도 유지된다.
+  function applyViewMode(mode) {
+    const stella = mode === 'stellarium';
+    const content = $('.content');
+    const view = $('#stellariumView');
+    if (content) content.hidden = stella;
+    if (view) view.hidden = !stella;
+    document.querySelectorAll('.vt-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === mode));
+  }
+  function wireStellariumWebview() {
+    const wv = $('#stellariumWebview');
+    if (!wv || wv._wired) return;
+    wv._wired = true;
+    const loading = $('#stellariumLoading');
+    const errEl = $('#stellariumError');
+    // 로딩 오버레이는 '첫 로드'에만 보여준다. 그 뒤 페이지 이동마다 전체 스피너가 깜빡이면
+    // 화면이 끊겨 보이므로, 한 번 떠본 뒤로는 오버레이를 띄우지 않는다(webview 가 이전 화면을 유지).
+    wv.addEventListener('did-start-loading', () => { if (loading && !wv._everLoaded) loading.hidden = false; if (errEl) errEl.hidden = true; });
+    wv.addEventListener('did-stop-loading', () => { wv._everLoaded = true; if (loading) loading.hidden = true; });
+    wv.addEventListener('did-fail-load', (e) => {
+      if (e.errorCode === -3) return; // ABORTED(하위 리소스/취소) 무시
+      if (loading) loading.hidden = true;
+      if (errEl) { errEl.hidden = false; errEl.innerHTML = errorBoxHtml(T('sched.error'), e.errorDescription || ''); }
+    });
+  }
+  async function stellariumUrl(path) {
+    let base = 'https://stellarium.kr';
+    try { base = (await api.getWebHomeUrl()).replace(/\/$/, ''); } catch { /* 기본값 */ }
+    return base + (path || '/');
+  }
+  // path 를 주면 그 페이지로 이동, 없으면 처음 한 번만 홈 로드(토글용). 그 뒤 스텔라리움 화면으로 전환.
+  async function showStellarium(path) {
+    const wv = $('#stellariumWebview');
+    if (wv) {
+      wireStellariumWebview();
+      if (path != null) { wv.src = await stellariumUrl(path); wv._loaded = true; }
+      else if (!wv._loaded) { wv.src = await stellariumUrl('/'); wv._loaded = true; }
+    }
+    applyViewMode('stellarium');
+  }
+  function setViewMode(mode) {
+    if (mode === 'stellarium') showStellarium();
+    else applyViewMode('status');
+    api.setSettings({ viewMode: mode }).then((s) => (state.settings = s)).catch(() => { /* 저장 실패해도 화면은 전환됨 */ });
+  }
+  // 멤버를 앱 안 스텔라리움의 그 멤버 페이지(/stella/<slug>)로 연다 — 기존 기능과 스텔라리움 연결.
+  function openStellariumMember(slug) {
+    if (!slug) return;
+    showStellarium('/stella/' + encodeURIComponent(slug));
+    api.setSettings({ viewMode: 'stellarium' }).then((s) => (state.settings = s)).catch(() => {});
+  }
+  function wireViewToggle() {
+    document.querySelectorAll('.vt-btn').forEach((b) => b.addEventListener('click', () => {
+      const mode = b.dataset.view;
+      if ((state.settings.viewMode || 'status') === mode) return;
+      setViewMode(mode);
+    }));
+  }
+
+  // 월 이동: 켜놓은 오른쪽 세부 패널은 그대로 유지한다(원래 선택한 날의 일정을 계속 보여줌).
   function calShift(delta) { let m = CAL.m + delta, y = CAL.y; if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; } CAL.y = y; CAL.m = m; loadCalendar(); }
 
   async function loadCalendar() {
@@ -1318,16 +1390,6 @@
     $('#btnCalendar').addEventListener('click', openCalendar);
     $('#closeCal').addEventListener('click', () => closeModalEl('#calModal'));
     $('#calModal').addEventListener('click', (e) => { if (e.target.id === 'calModal') closeModalEl('#calModal'); });
-    $('#calPrev').addEventListener('click', () => calShift(-1));
-    $('#calNext').addEventListener('click', () => calShift(1));
-    // '+N' 클릭 → 그 날의 세부 일정을 오른쪽 패널에 연다(데이터 재요청 없이 리렌더).
-    $('#calGrid').addEventListener('click', (e) => {
-      const more = e.target.closest('.cal-more');
-      if (!more) return;
-      openDayDetail(more.dataset.day);
-    });
-    // 세부 패널의 닫기 버튼(매번 새로 그려지므로 위임).
-    $('#calDetail').addEventListener('click', (e) => { if (e.target.closest('#calDetailClose')) closeDayDetail(); });
   }
 
   // 제목이 카드 폭보다 길면 양쪽 그라데이션 + 좌우 왕복(마퀴) 애니메이션
@@ -1364,6 +1426,8 @@
     $('#setThumbs').checked = s.showThumbnails !== false;
     $('#setTray').checked = s.minimizeToTray !== false;
     $('#setStartup').checked = !!s.launchAtStartup;
+    $('#setBeta').checked = !!s.betaChannel;
+    $('#setDiscord').checked = s.discordRpc !== false;
     $('#setInterval').value = String(s.pollIntervalSec || 60);
     $('#setLanguage').value = I18N.normalize(s.language) || 'ko';
     buildMemberList('#subList', s.subscribed, saveSubscriptions);
@@ -1411,7 +1475,7 @@
 
   function openSettings() {
     fillSettings();
-    switchTab('general');
+    switchTab('info'); // 일반·알림은 웹 /setting 으로 이동 — 네이티브는 정보만 연다
     const m = $('#settingsModal');
     m.hidden = false;
     void m.offsetHeight; // 리플로우 후 열기 애니메이션
@@ -1434,6 +1498,7 @@
     renderNow(false);           // 멤버 카드(이름/상태/버튼)
     renderSchedule(true);       // 스케줄(강제 재렌더)
     updateSummary();            // 상단 요약
+    updateSurveyBanner();       // 설문 배너 문구(동적 텍스트)
     renderTerms();              // 이용약관 본문
     if (!$('#settingsModal').hidden) {
       buildMemberList('#subList', state.settings.subscribed, saveSubscriptions);
@@ -1443,7 +1508,10 @@
   }
 
   function wireSettings() {
-    $('#btnSettings').addEventListener('click', openSettings);
+    // 설정 진입은 트레이 메뉴에서 — 메인이 보내는 신호로 모달을 연다(타이틀바 ⚙️ 제거됨).
+    if (api.onOpenSettings) api.onOpenSettings(() => openSettings());
+    // 트레이 '업데이트 확인' — 정보 모달을 열고 btnCheckUpdate 와 같은 수동 체크를 돈다.
+    if (api.onCheckUpdate) api.onCheckUpdate(() => { openSettings(); state.manualUpdateCheck = true; api.checkUpdate(); });
     $('#setLanguage').addEventListener('change', (e) => applyLanguage(e.target.value));
     $('#closeSettings').addEventListener('click', closeSettings);
     $('#settingsModal').addEventListener('click', (e) => { if (e.target.id === 'settingsModal') closeSettings(); });
@@ -1471,18 +1539,26 @@
     $('#setThumbs').addEventListener('change', (e) => { save({ showThumbnails: e.target.checked }); render(); });
     $('#setTray').addEventListener('change', (e) => save({ minimizeToTray: e.target.checked }));
     $('#setStartup').addEventListener('change', (e) => save({ launchAtStartup: e.target.checked }));
+    $('#setDiscord').addEventListener('change', (e) => save({ discordRpc: e.target.checked }));
+    // 베타 채널 토글: 저장 후 곧바로 업데이트를 다시 확인해 새 채널 기준(정식/베타) 최신 버전을 안내한다.
+    $('#setBeta').addEventListener('change', async (e) => {
+      await save({ betaChannel: e.target.checked });
+      state.manualUpdateCheck = true;
+      api.checkUpdate();
+    });
     $('#setInterval').addEventListener('change', (e) => save({ pollIntervalSec: Number(e.target.value) }));
 
     $('#btnCheckUpdate').addEventListener('click', () => { state.manualUpdateCheck = true; api.checkUpdate(); });
     $('#btnReport').addEventListener('click', () => openModalEl('#contactModal'));
     $('#btnCopyDiag').addEventListener('click', copyDiagnostics);
+    $('#btnUninstall').addEventListener('click', () => api.uninstall());
   }
 
-  // 오류 메시지 복사 버튼은 동적 렌더링을 위해 이벤트 위임으로 처리한다.
+  // 오류 메시지 '복사' 버튼(위임) — 어디에 있든 .err-copy 를 누르면 data-copy 원문을 클립보드로.
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest && e.target.closest('.err-copy');
     if (!btn) return;
-    try { await api.copyToClipboard(btn.dataset.copy || ''); } catch { /* 텍스트 선택으로도 복사 가능 */ }
+    try { await api.copyToClipboard(btn.dataset.copy || ''); } catch { /* 실패해도 텍스트는 직접 선택·복사 가능 */ }
     showToast({ icon: 'checkmark', title: T('err.copied'), duration: 2000 });
   });
 
@@ -1692,23 +1768,21 @@
   // ── 공용 모달 열기/닫기(애니메이션) ───────────
   function openModalEl(sel) { const m = $(sel); m.hidden = false; void m.offsetHeight; m.classList.add('open'); }
   // 캘린더는 아래로 슬라이드하는 시간(.36s)에 맞춰 조금 더 늦게 감춘다.
-  function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), sel === '#calModal' ? 380 : 240); }
+  function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), (sel === '#calModal' || sel === '#surveyModal') ? 380 : 240); }
 
-  // ── 문의하기(이메일 · GitHub 이슈) ─────────────
+  // ── 문의하기(이메일 · GitHub 이슈 · X) ────────
   function wireContact() {
     const CONTACT = {
-      email: 'mailto:ryoyamada8083@proton.me?subject=' + encodeURIComponent('[스텔라상태] 문의'),
-      github: 'https://github.com/Maroshall/stellastatus_app_unoffical_linux/issues/new',
+      email: 'mailto:contact@stellarium.kr?subject=' + encodeURIComponent('[스텔라리움] 문의'),
+      github: 'https://github.com/tabiluv/stellastatus_app/issues/new',
+      x: 'https://x.com/tabi_1uv',
     };
+    const xSub = $('#coXsub'); if (xSub) xSub.textContent = '@tabi_1uv';
     $('#btnContact').addEventListener('click', () => openModalEl('#contactModal'));
     $('#closeContact').addEventListener('click', () => closeModalEl('#contactModal'));
     $('#contactModal').addEventListener('click', (e) => { if (e.target.id === 'contactModal') closeModalEl('#contactModal'); });
     document.querySelectorAll('.contact-opt').forEach((b) =>
-      b.addEventListener('click', () => {
-        const url = CONTACT[b.dataset.contact];
-        if (url) openLink(url);
-        closeModalEl('#contactModal');
-      }),
+      b.addEventListener('click', () => { openLink(CONTACT[b.dataset.contact]); closeModalEl('#contactModal'); }),
     );
   }
 
@@ -1760,8 +1834,8 @@
   }
   // 이용약관 본문(언어별). 방송/데이터 관련 사실 관계는 동일하게 유지.
   const TERMS = {
-    ko: `<p class="t-h">스텔라상태 이용약관</p>
-<p><b>제1조 (목적 및 동의)</b><br>본 약관은 스텔라상태(이하 "앱")의 설치와 사용에 관한 조건을 정합니다. 이용자가 앱을 설치·실행함으로써 본 약관에 동의한 것으로 봅니다.</p>
+    ko: `<p class="t-h">스텔라리움 이용약관</p>
+<p><b>제1조 (목적 및 동의)</b><br>본 약관은 스텔라리움(이하 "앱")의 설치와 사용에 관한 조건을 정합니다. 이용자가 앱을 설치·실행함으로써 본 약관에 동의한 것으로 봅니다.</p>
 <p><b>제2조 (라이선스)</b><br>앱은 MIT 라이선스로 제공되며, 개인적·비상업적 용도로 자유롭게 사용·복제·배포할 수 있습니다.</p>
 <p><b>제3조 (사용 라이브러리 및 데이터)</b><br>앱은 오픈소스 라이브러리 stellastatus를 사용하여 방송 상태와 방송 스케줄(뱅온) 정보를 조회합니다. 해당 라이브러리는 치지직(CHZZK)의 방송 상태와 StelLight의 스케줄 등 공개 데이터를 기반으로 동작하며, 라이브러리 또는 원 서비스의 정책·구조 변경에 따라 일부 기능이 제한되거나 중단될 수 있습니다.</p>
 <p><b>제4조 (비공식 고지)</b><br>본 앱은 스텔라이브 및 관련 서비스의 공식 제작물이 아닌, 팬이 제작한 비공식 도구입니다.</p>
@@ -1770,8 +1844,8 @@
 <p><b>제7조 (자동 업데이트)</b><br>앱은 최신 버전 확인 및 업데이트 파일 다운로드를 위해 배포처(GitHub)에 접속할 수 있습니다.</p>
 <p><b>제8조 (금지 행위)</b><br>데이터 출처 서버에 과도한 부하를 유발하는 개조·자동화·대량 요청 등의 행위를 금합니다.</p>
 <p><b>제9조 (약관의 변경)</b><br>본 약관은 앱의 업데이트와 함께 변경될 수 있으며, 변경된 약관은 앱 내 정보 화면 또는 배포처를 통해 고지됩니다.</p>`,
-    en: `<p class="t-h">StellaStatus Terms of Use</p>
-<p><b>Article 1 (Purpose & Consent)</b><br>These terms govern the installation and use of StellaStatus (the "App"). By installing and running the App, you agree to these terms.</p>
+    en: `<p class="t-h">Stellarium Terms of Use</p>
+<p><b>Article 1 (Purpose & Consent)</b><br>These terms govern the installation and use of Stellarium (the "App"). By installing and running the App, you agree to these terms.</p>
 <p><b>Article 2 (License)</b><br>The App is provided under the MIT License and may be freely used, copied, and distributed for personal, non-commercial purposes.</p>
 <p><b>Article 3 (Libraries & Data)</b><br>The App uses the open-source library stellastatus to query stream status and schedule (bang-on) information. That library relies on public data such as CHZZK stream status and StelLight schedules; some features may be limited or stop working if those services change their policy or structure.</p>
 <p><b>Article 4 (Unofficial Notice)</b><br>This App is an unofficial, fan-made tool and is not an official product of StelLive or related services.</p>
@@ -1780,8 +1854,8 @@
 <p><b>Article 7 (Auto-update)</b><br>The App may connect to its distribution host (GitHub) to check for the latest version and download update files.</p>
 <p><b>Article 8 (Prohibited Acts)</b><br>Modification, automation, or bulk requests that place excessive load on the data-source servers are prohibited.</p>
 <p><b>Article 9 (Changes)</b><br>These terms may change with app updates; the revised terms are announced in the App's About screen or on the distribution host.</p>`,
-    ja: `<p class="t-h">StellaStatus 利用規約</p>
-<p><b>第1条 (目的および同意)</b><br>本規約は StellaStatus(以下「アプリ」)のインストールおよび使用条件を定めます。アプリをインストール・実行することで本規約に同意したものとみなします。</p>
+    ja: `<p class="t-h">Stellarium 利用規約</p>
+<p><b>第1条 (目的および同意)</b><br>本規約は Stellarium(以下「アプリ」)のインストールおよび使用条件を定めます。アプリをインストール・実行することで本規約に同意したものとみなします。</p>
 <p><b>第2条 (ライセンス)</b><br>アプリは MIT ライセンスで提供され、個人的・非商用目的で自由に使用・複製・配布できます。</p>
 <p><b>第3条 (使用ライブラリおよびデータ)</b><br>アプリはオープンソースライブラリ stellastatus を使用して配信状態と配信スケジュールを取得します。当該ライブラリは CHZZK の配信状態や StelLight のスケジュールなど公開データに基づいて動作し、ライブラリまたは元サービスの方針・構造の変更により一部機能が制限・停止する場合があります。</p>
 <p><b>第4条 (非公式の告知)</b><br>本アプリはステラライブおよび関連サービスの公式制作物ではなく、ファンが制作した非公式ツールです。</p>
@@ -1868,8 +1942,8 @@
     let t;
     $('#searchInput').addEventListener('input', (e) => { clearTimeout(t); t = setTimeout(() => { state.search = e.target.value.trim(); render(true); }, 120); });
 
-    const refreshBtn = $('#btnRefresh');
-    refreshBtn.addEventListener('click', async () => { refreshBtn.querySelector('svg')?.classList.add('spin'); await api.refresh(); });
+    const refreshBtn = $('#btnRefresh'); // 타이틀바에서 제거됨(스텔라리움 전용). 남아 있을 때만 연결.
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => { refreshBtn.querySelector('svg')?.classList.add('spin'); await api.refresh(); });
 
     // 멤버는 세로 스크롤 그리드, 스케줄만 가로 스크롤(휠/드래그)
     attachHScroll($('#schedStrip'));
@@ -1880,8 +1954,6 @@
     $('#winClose').addEventListener('click', () => api.close());
   }
   function installIcons() {
-    setIcon('#btnRefresh', 'refresh', 16);
-    setIcon('#btnSettings', 'settings', 16);
     setIcon('#searchIcon', 'search', 16);
     setIcon('#winMin', 'minus', 14);
     setIcon('#winMax', 'square', 13);
@@ -1892,8 +1964,7 @@
     setIcon('#closeTerms', 'x', 14);
     setIcon('#closeSched', 'x', 14);
     setIcon('#closeCal', 'x', 14);
-    setIcon('#calPrev', 'chevronLeft', 20);
-    setIcon('#calNext', 'chevronRight', 20);
+    setIcon('#closeSurvey', 'x', 14);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }
@@ -1924,20 +1995,10 @@
     // 저장된 언어로 정적 텍스트 번역 적용(첫 렌더 전에)
     I18N.setLang(state.settings.language || 'ko');
     I18N.apply(document);
-    state.members = (await api.getMembers()) || [];
-    try { state.networkOffline = !!(await api.getNetworkState()); } catch { state.networkOffline = false; }
-    state.thumbStamp = Date.now();
-    render();
-    loadSchedule(); // 뱅온은 시작 시 1회 + 이후 1시간마다 재조회
-    setInterval(loadSchedule, 60 * 60 * 1000);
-    // 시간이 지나며 시작/종료가 바뀌는 것을 앱이 주기적으로 재판정(재요청 없음, 변화 있을 때만 다시 그림)
-    setInterval(() => renderSchedule(), 30000);
-    // 라이브 카드의 방송 경과 시간 1분마다 갱신(전체 리렌더 없이 텍스트만)
-    setInterval(() => {
-      document.querySelectorAll('.live-elapsed[data-open]').forEach((el) => {
-        el.innerHTML = icon('clock', 12) + ' ' + esc(fmtUptime(+el.dataset.open));
-      });
-    }, 60000);
+    // 앱은 스텔라리움 웹을 메인 화면으로 보여준다(방송 상태 화면은 제거됨 — 토글 없이 항상 스텔라리움).
+    //  로컬 치지직 폴링(멤버/스케줄 조회·뱅온 판정)은 완전히 제거됐다 — 방송 상태·알림·브라우저
+    //  자동 열기는 모두 스텔라리움 웹(로그인 계정)이 담당한다. 여기서는 웹만 띄운다.
+    showStellarium();
     // 릴리스 노트 등 마크다운 링크 클릭 → 외부 브라우저
     document.body.addEventListener('click', (e) => {
       const a = e.target.closest('.md-link');
@@ -1948,77 +2009,16 @@
 
     // 업데이트 후 첫 실행이면 이번 버전에서 바뀐 점을 딱 1번 안내한다.
     maybeShowWhatsNew();
+
+    // 통합 설문 배너(진행 중 · 미참여 · 닫지 않음 일 때만) — 시작 시 1회 판단.
     updateSurveyBanner();
 
-    api.onMembers((members) => {
-      try {
-        state.networkOffline = false;
-        state.networkToastShown = false;
-        state.members = members || [];
-        state.thumbStamp = Date.now();
-        $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
-        render();
-        renderSchedule(); // 라이브 상태 변화 반영(내부에서 변화 있을 때만 다시 그림)
-        if (!$('#settingsModal').hidden) {
-          buildMemberList('#subList', state.settings.subscribed, saveSubscriptions);
-          buildMemberList('#autoOpenList', state.settings.autoOpenList, saveAutoOpen);
-          updateAutoOpenEnabled();
-        }
-      } catch (err) {
-        console.error('members 갱신 처리 오류:', err);
-      }
-    });
-    api.onNetwork((info) => {
-      state.networkOffline = info?.offline !== false;
-      if (state.networkOffline) {
-        if (!state.networkToastShown) {
-          state.networkToastShown = true;
-          showToast({
-            icon: 'alert',
-            title: '네트워크 연결이 불안정해요!',
-            desc: '연결이 복구될 때까지 현재 방송 상태를 유지합니다.',
-            duration: 7000,
-            className: 'network-toast',
-          });
-        }
-      } else {
-        // 네트워크가 복구된 경우 사용자에게 즉시 알리고,
-        // poller가 다음 정상 응답으로 최신 방송 상태를 다시 반영한다.
-        state.networkOffline = false;
-        state.networkToastShown = false;
-
-        showToast({
-          icon: 'check',
-          title: '네트워크 연결됐어요!',
-          desc: '다시 방송상태를 불러올게요',
-          duration: 5000,
-          className: 'network-restored-toast',
-        });
-
-        $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
-        render();
-      }
-    });
-    api.onNightAllOffline((info) => {
-      showToast({
-        icon: 'moon',
-        title: info?.title || '스텔라 모두가 오프라인이에요!',
-        desc: info?.message || '잘자요 🌙',
-        duration: 8000,
-        className: 'night-all-offline-toast',
-      });
-    });
-    api.onPolling((busy) => {
-      const svg = $('#btnRefresh').querySelector('svg');
-      if (svg) busy ? svg.classList.add('spin') : svg.classList.remove('spin');
-    });
-    // 방송 시작 → 인앱 플로팅 알림
-    api.onLive((live) => {
-      (live || []).forEach((m) =>
-        showToast({ avatar: m.avatar, accent: m.accent, title: T('toast.liveTitle', { name: I18N.memberName(m) }), desc: m.title || T('toast.liveDesc'), url: m.liveUrl, duration: 7000 }),
-      );
-    });
+    // 멤버/폴링/라이브 푸시 리스너는 제거됐다 — 로컬 치지직 폴링이 사라져 메인에서 더 이상
+    //  보내지 않는다. 방송 상태·알림은 스텔라리움 웹(webview)이 담당한다. 업데이트 상태만 유지.
     api.onUpdateStatus(handleUpdate);
+    // 시스템 브라우저 로그인 후 stellarium:// 딥링크로 돌아오면, 그 app-finish 주소로 webview 를
+    //  이동시켜 세션을 webview 에 세운다(= 앱이 로그인 상태가 된다).
+    api.onAuthFinish?.((pathUrl) => { if (pathUrl) showStellarium(pathUrl); });
   }
 
   window.addEventListener('DOMContentLoaded', init);

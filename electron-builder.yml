@@ -1,8 +1,8 @@
-appId: com.stellastatus.app
+appId: kr.stellarium.app
 
-productName: 스텔라상태
+productName: 스텔라리움
 
-copyright: Copyright © 2026 StellaStatus
+copyright: Copyright © 2026 Stellarium
 
 directories:
   output: dist
@@ -19,6 +19,8 @@ linux:
   target:
     - AppImage
   category: Utility
+  mimeTypes:
+    - x-scheme-handler/stellarium
 
   artifactName: "${productName}-${version}.${ext}"
 

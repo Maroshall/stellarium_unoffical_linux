@@ -1,11 +1,11 @@
 {
-  "name": "stellastatus-app",
-  "productName": "StellaStatus",
-  "version": "1.0.7",
-  "fullVersion": "1.0.7",
-  "description": "스텔라이브 멤버의 치지직 방송 상태를 확인하고 Linux 데스크톱 알림을 보내주는 비공식 앱",
+  "name": "stellarium-unofficial-linux",
+  "productName": "스텔라리움",
+  "version": "1.1.1",
+  "fullVersion": "1.1.1",
+  "description": "스텔라리움 서비스용 Linux 데스크톱 앱",
   "author": {
-    "name": "StellaStatus",
+    "name": "Stellarium",
     "email": "tabi.luv@icloud.com"
   },
   "license": "MIT",
@@ -15,16 +15,14 @@
     "dev": "electron . --dev",
     "gen-icon": "node scripts/gen-icon.mjs",
     "gen-logos": "node scripts/normalize-logos.mjs",
-    "gen-art": "node scripts/gen-installer-art.mjs",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "dist-mac": "node scripts/build-mac.mjs",
-    "build-setup": "node scripts/build-setup.mjs",
     "release": "electron-builder --publish always"
   },
   "dependencies": {
     "electron-store": "^8.2.0",
-    "stellastatus": "^0.1.0"
+    "stellastatus": "^0.1.0",
+    "discord-rpc": "^4.0.1"
   },
   "devDependencies": {
     "electron": "^43.4.0",
@@ -32,6 +30,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Maroshall/stellastatus_app_unoffical_linux.git"
+    "url": "git+https://github.com/Maroshall/stellarium_unoffical_linux.git"
   }
 }

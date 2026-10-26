@@ -45,6 +45,8 @@ const store = new Store({
     launchAtStartup: false,
     // 시작 시 창을 숨긴 채(트레이) 실행
     startHidden: false,
+    // 베타(Pre-release) 버전 받기. 켜면 정식+베타 중 가장 높은 버전을 우선 설치한다.
+    betaChannel: false,
     // 카드 썸네일 표시
     showThumbnails: true,
     // 상단에 고정(즐겨찾기)한 멤버 채널 key 목록. 목록 맨 위로 정렬된다.
@@ -53,9 +55,10 @@ const store = new Store({
     windowBounds: { width: 1180, height: 780 },
     // '이번 버전에서 바뀐 점'을 마지막으로 보여준 버전. 업데이트 후 첫 실행 때 딱 1번만 안내하는 데 쓴다.
     lastShownVersion: null,
-    // 통합 설문 상태
-    surveyDeviceId: null,
-    surveyBannerDismissed: false,
+    // 기본 화면: 'status'(방송 상태 UI) | 'stellarium'(스텔라리움 통합 홈). 서비스 초기 기본은 방송 상태.
+    viewMode: 'status',
+    // 디스코드에 '스텔라리움에서 무엇을 보는 중'인지 표시(Rich Presence).
+    discordRpc: true,
   },
 });
 

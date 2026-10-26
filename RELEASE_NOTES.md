@@ -1,104 +1,81 @@
 <!-- i18n:ko -->
-## 스텔라상태 v1.0.6.2
+## 스텔라리움 v1.1.1
 
-스텔라상태를 이용해주시는 분들께 진심으로 감사드립니다.
+> v1.0.9 이후의 변경 사항을 담은 **정식(안정) 버전** 입니다.
+> 사용 중 이상이 있으면 설정 → 정보 → **문제 신고** 로 알려주세요.
 
-### 이번 버전에서 바뀐 것
+스텔라리움을 이용해주시는 분들께 진심으로 감사드립니다.
 
-- **캘린더가 스텔라리움 웹 캘린더로 바뀌었습니다** — 전체·멤버별로 골라 보고, 날짜를 누르면 그날의 상세 일정을 볼 수 있어요. (표시에 인터넷 연결이 필요합니다)
-- **오늘의 뱅온 표시 개선** — 방송 중이 아닌 멤버의 새벽·이월 일정을 숨기지 않고 그대로 보여줍니다. (이월 처리는 지금 방송 중인 멤버에게만 적용)
-- **오류 메시지 복사** — 오류가 나면 그 내용을 그대로 선택·복사해 신고할 수 있게 했습니다. (복사 버튼 추가)
+# 수정된 내용
+- **시스템 트레이 기능 누락 해결** - 저번 업데이트에서 누락된 시스템 트레이에 관한 기능을 배포했어요. 이 문제는 새로운 로그인에만 이슈가 발생하였으며, 기존에 로그인하셨던 파스텔분들은 그대로 이용하실 수 있어요.
+
+- **스텔라 브라우저 개발에 따른 업데이트 주기 변경** - 스텔라리움 앱의 기능을 포함한 파스텔 전용 "스텔라 브라우저"의 개발이 시작되며, 이에 따라 스텔라리움 앱의 업데이트 주기가 변동될 수 있어요. Webview 특성 상 웹의 업데이트에 따라 앱 또한 자동으로 적용되니 참고바랍니다.
 
 ### 설치 방법
+**Windows**
+1. Assets 에서 `스텔라리움 Setup.exe` 를 내려받아 실행합니다.
+2. 설치 마법사에서 언어를 고르고 안내를 따라 진행합니다.
+3. SmartScreen 경고가 뜨면 "추가 정보 → 실행" 을 눌러 진행하세요.
 
-**Linux**
-
-1. GitHub Releases에서 `.AppImage` 파일을 내려받습니다.
-2. 실행 권한을 부여합니다.
-
-```bash
-chmod +x StellaStatus-*.AppImage
-```
-
-3. AppImage를 실행합니다.
-
-```bash
-./StellaStatus-*.AppImage
-```
+**macOS**
+1. 칩에 맞는 `.dmg` 를 내려받습니다. (Apple Silicon → `-arm64.dmg`, Intel → `-x64.dmg`)
+2. 열어서 앱을 `Applications` 폴더로 드래그합니다.
+3. "확인되지 않은 개발자" 경고가 뜨면 설정 > 보안 및 개인정보 보호 > 맨 하단 보안 섹션에서 **그래도 열기**를 눌러 설치할 수 있습니다.
 
 ### 지원 환경
-
-- **Linux x86_64 (x64)**
-- **AppImage**
-
-> 이 프로젝트는 StellaLive 공식 서비스가 아닌 비공식 팬 프로젝트입니다.
+- **Windows** — Windows 10 이상 (64비트)
+- **macOS** — macOS 12 (Monterey) 이상
 
 <!-- i18n:en -->
-## StellaStatus v1.0.6.2
+## Stellarium v1.1.1
 
-Thank you so much for using StellaStatus.
+> This is the **stable release** with the changes made since v1.0.9.
+> If something looks off, please report it via Settings → About → Report a problem.
 
-### What's new
+Thank you so much for using Stellarium.
 
-- **The calendar is now the Stellarium web calendar** — filter by everyone or a single member, and select a date to see that day's detailed schedule. (An internet connection is required to display it.)
-- **Improved "Today's schedule" display** — dawn and carried-over schedules for members who aren't currently live are no longer hidden. (Carry-over processing now applies only to members who are currently live.)
-- **Copyable error messages** — when an error occurs, you can select and copy the error text to report it. (Added a copy button.)
+# What's changed
+- **Fixed: missing system-tray feature** — we've shipped the system-tray feature that was dropped in the last update. The problem only affected new sign-ins; Pastels who were already signed in could keep using it as before.
+- **Update cadence may change as the Stella Browser is developed** — work has begun on "Stella Browser," a Pastel-exclusive browser that includes the Stellarium app's features, so the Stellarium app's update cadence may shift accordingly. Note that, by the nature of a webview, web updates are applied to the app automatically as well.
 
 ### How to install
+**Windows**
+1. Download and run `스텔라리움 Setup.exe` from Assets.
+2. Pick a language in the installer and follow the steps.
+3. If SmartScreen warns you, click “More info → Run anyway”.
 
-**Linux**
-
-1. Download the `.AppImage` file from GitHub Releases.
-2. Make the AppImage executable.
-
-```bash
-chmod +x StellaStatus-*.AppImage
-```
-
-3. Run the AppImage.
-
-```bash
-./StellaStatus-*.AppImage
-```
+**macOS**
+1. Download the `.dmg` for your chip (Apple Silicon → `-arm64.dmg`, Intel → `-x64.dmg`).
+2. Open it and drag the app into your `Applications` folder.
+3. If you see an “unidentified developer” warning, go to System Settings > Privacy & Security > the Security section at the bottom and click **Open Anyway** to install it.
 
 ### Requirements
-
-- **Linux x86_64 (x64)**
-- **AppImage**
-
-> This project is an unofficial fan-made project and is not an official StellaLive service.
+- **Windows** — Windows 10 or later (64-bit)
+- **macOS** — macOS 12 (Monterey) or later
 
 <!-- i18n:ja -->
-## StellaStatus v1.0.6.2
+## Stellarium v1.1.1
 
-StellaStatusをご利用いただきありがとうございます。
+> v1.0.9 以降の変更を含む **正式（安定）版** です。
+> 不具合があれば、設定 → 情報 → 問題を報告 からお知らせください。
 
-### 今回の変更点
+Stellarium をご利用いただきありがとうございます。
 
-- **カレンダーがStellariumウェブカレンダーに変わりました** — 全体・メンバー別に絞り込み、日付を選択するとその日の詳細な予定を確認できます。（表示にはインターネット接続が必要です）
-- **「今日の配信予定」の表示を改善** — 配信中でないメンバーの深夜・繰り越し予定を非表示にせず、そのまま表示するようになりました。（繰り越し処理は現在配信中のメンバーにのみ適用されます）
-- **エラーメッセージのコピー** — エラーが発生した際、その内容を選択してコピーし、報告できるようになりました。（コピー ボタンを追加）
+# 変更内容
+- **システムトレイ機能の欠落を修正** — 前回のアップデートで欠落していたシステムトレイ関連の機能を配信しました。この問題は新規ログインでのみ発生し、すでにログイン済みのパステルの方はそのままご利用いただけます。
+- **ステラブラウザの開発に伴う更新頻度の変更** — Stellarium アプリの機能を含むパステル専用「ステラブラウザ」の開発が始まり、それに伴い Stellarium アプリの更新頻度が変わる場合があります。Webview の特性上、ウェブの更新に合わせてアプリにも自動的に反映されますのでご了承ください。
 
 ### インストール方法
+**Windows**
+1. Assets から `스텔라리움 Setup.exe` をダウンロードして実行します。
+2. インストーラーで言語を選び、案内に従って進めます。
+3. SmartScreen の警告が出たら「詳細情報 → 実行」を押して進めてください。
 
-**Linux**
-
-1. GitHub Releasesから`.AppImage`ファイルをダウンロードします。
-2. AppImageに実行権限を付与します。
-
-```bash
-chmod +x StellaStatus-*.AppImage
-```
-
-3. AppImageを実行します。
-
-```bash
-./StellaStatus-*.AppImage
-```
+**macOS**
+1. チップに合った `.dmg` をダウンロードします（Apple Silicon → `-arm64.dmg`、Intel → `-x64.dmg`）。
+2. 開いてアプリを `Applications` フォルダにドラッグします。
+3. 「開発元を確認できません」の警告が出たら、システム設定 > プライバシーとセキュリティ > 最下部のセキュリティ セクションで**このまま開く**を押すとインストールできます。
 
 ### 動作環境
-
-- **Linux x86_64 (x64)**
-- **AppImage**
-
-> このプロジェクトはStellaLive公式サービスではなく、ファンによる非公式プロジェクトです。
+- **Windows** — Windows 10 以降（64ビット）
+- **macOS** — macOS 12 (Monterey) 以降
