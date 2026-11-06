@@ -20,9 +20,9 @@
 - GitHub Releases 기반 업데이트 확인
 - 디스코드 Rich Presence 및 스텔라리움 웹 화면 연동(원본 기능)
 ## 구동 테스트 확인된 환경
--Fedora
--Arch linux
--Ubuntu Touch
+- Fedora
+- Arch linux
+- Ubuntu Touch
 
 ## 실행 및 개발
 
